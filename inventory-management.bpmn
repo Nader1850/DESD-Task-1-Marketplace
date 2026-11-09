@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.52.0">
+  <bpmn:process id="InventoryProcess" name="Inventory and Stock Management" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1" name="Start Inventory Check">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Stock" name="Stock &#62; 0?" default="Flow_OutOfStock">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:incoming>Flow_RestockYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_InStock</bpmn:outgoing>
+      <bpmn:outgoing>Flow_OutOfStock</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_UpdateStatus" name="Update Marketplace Database">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="update-db-service" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_InStock</bpmn:incoming>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_Available</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0p1xqe6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_NotifyProducer" name="Notify Producer: Out of Stock">
+      <bpmn:incoming>Flow_OutOfStock</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Restock" name="Is Stock Replenished?">
+      <bpmn:incoming>Flow_0p1xqe6</bpmn:incoming>
+      <bpmn:outgoing>Flow_RestockYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RestockNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_Available" name="Product Available">
+      <bpmn:incoming>Flow_Available</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_Unavailable" name="Product Unavailable">
+      <bpmn:incoming>Flow_RestockNo</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Gateway_Stock" />
+    <bpmn:sequenceFlow id="Flow_InStock" name="Yes" sourceRef="Gateway_Stock" targetRef="Task_UpdateStatus">
+      <bpmn:conditionExpression xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="bpmn:tFormalExpression">= stockLevel &gt; 0</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Available" sourceRef="Task_UpdateStatus" targetRef="EndEvent_Available" />
+    <bpmn:sequenceFlow id="Flow_OutOfStock" name="No" sourceRef="Gateway_Stock" targetRef="Task_NotifyProducer" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_NotifyProducer" targetRef="Task_UpdateStatus" />
+    <bpmn:sequenceFlow id="Flow_RestockYes" name="Yes, Replenished" sourceRef="Gateway_Restock" targetRef="Gateway_Stock" />
+    <bpmn:sequenceFlow id="Flow_RestockNo" name="No" sourceRef="Gateway_Restock" targetRef="EndEvent_Unavailable" />
+    <bpmn:sequenceFlow id="Flow_0p1xqe6" sourceRef="Task_UpdateStatus" targetRef="Gateway_Restock" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="InventoryProcess">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyProducer_di" bpmnElement="Task_NotifyProducer">
+        <dc:Bounds x="380" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Unavailable_di" bpmnElement="EndEvent_Unavailable">
+        <dc:Bounds x="682" y="302" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Stock_di" bpmnElement="Gateway_Stock" isMarkerVisible="true">
+        <dc:Bounds x="265" y="145" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="263" y="121" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Available_di" bpmnElement="EndEvent_Available">
+        <dc:Bounds x="772" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="747" y="188" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_UpdateStatus_di" bpmnElement="Task_UpdateStatus">
+        <dc:Bounds x="430" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Restock_di" bpmnElement="Gateway_Restock" isMarkerVisible="true">
+        <dc:Bounds x="515" y="295" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="506" y="345" width="68" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="170" />
+        <di:waypoint x="265" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InStock_di" bpmnElement="Flow_InStock">
+        <di:waypoint x="315" y="170" />
+        <di:waypoint x="363" y="170" />
+        <di:waypoint x="363" y="120" />
+        <di:waypoint x="430" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="344" y="149" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Available_di" bpmnElement="Flow_Available">
+        <di:waypoint x="530" y="120" />
+        <di:waypoint x="641" y="120" />
+        <di:waypoint x="641" y="170" />
+        <di:waypoint x="772" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_OutOfStock_di" bpmnElement="Flow_OutOfStock">
+        <di:waypoint x="290" y="195" />
+        <di:waypoint x="290" y="320" />
+        <di:waypoint x="380" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="298" y="248" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="430" y="280" />
+        <di:waypoint x="430" y="225" />
+        <di:waypoint x="480" y="225" />
+        <di:waypoint x="480" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RestockYes_di" bpmnElement="Flow_RestockYes">
+        <di:waypoint x="540" y="295" />
+        <di:waypoint x="540" y="170" />
+        <di:waypoint x="315" y="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="479" y="226" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RestockNo_di" bpmnElement="Flow_RestockNo">
+        <di:waypoint x="565" y="320" />
+        <di:waypoint x="682" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="617" y="295" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0p1xqe6_di" bpmnElement="Flow_0p1xqe6">
+        <di:waypoint x="480" y="160" />
+        <di:waypoint x="480" y="223" />
+        <di:waypoint x="540" y="223" />
+        <di:waypoint x="540" y="295" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
