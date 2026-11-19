@@ -5,7 +5,7 @@
 
 ## Sprint 2 Team & Roles
 For Sprint 2, the group has successfully coordinated and divided the tasks:
-*   **Nadir**: Technical Lead (Operational BPMN, Camunda Automation, Repository Management).
+*   **Nader Uddin** Student ID-24061972: Technical Lead (Operational BPMN, Camunda Automation, Repository Management).
 *   **Muhammad Raza**: Socio-Technical Modelling (i* SD and SR models).
 *   **Imed Adjeneg**: LESP Evaluation and Traceability.
 
