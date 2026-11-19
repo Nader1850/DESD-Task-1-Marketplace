@@ -15,3 +15,9 @@ For Sprint 2, the group has successfully coordinated and divided the tasks:
 *   `product-listing.bpmn` - Executable operational process (including REST Service Task and Boundary Events).
 *   `inventory-management.bpmn` - Executable operational process for stock management.
 *   `Form_ProductDetails.form` - Camunda Form linked to the Product Listing process.
+
+## Sprint 3 Plan (Final Implementation)
+Moving into Sprint 3, our focus is on final integration and in-class demonstration. 
+*   **Nadir**: Final Camunda execution testing, fixing local UI bugs, and final demonstration preparation.
+*   **Muhammad Raza**: Assisting with final traceability checks and Contribution Matrix.
+*   **Imed**: Finalizing the LESP evaluation document and ensuring compliance in the Camunda process.
