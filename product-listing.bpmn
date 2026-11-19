@@ -1,77 +1,220 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.52.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.52.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
   <bpmn:process id="ProductListingProcess" name="Product Listing Validation" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" name="Start Listing">
-      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Start</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:userTask id="Task_EnterDetails" name="Enter Product Details">
       <bpmn:extensionElements>
         <zeebe:formDefinition formId="Form_ProductDetails" />
+        <zeebe:assignmentDefinition assignee="demo" />
       </bpmn:extensionElements>
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:incoming>Flow_Start</bpmn:incoming>
+      <bpmn:incoming>Flow_Invalid</bpmn:incoming>
+      <bpmn:outgoing>Flow_CheckAuth</bpmn:outgoing>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="Gateway_CheckValid" name="Are fields valid?" default="Flow_Invalid">
-      <bpmn:incoming>Flow_2</bpmn:incoming>
+    <bpmn:exclusiveGateway id="Gateway_CheckAuth" name="Is Producer Authorized?" default="Flow_NotAuthorized">
+      <bpmn:incoming>Flow_CheckAuth</bpmn:incoming>
+      <bpmn:outgoing>Flow_Authorized</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotAuthorized</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="EndEvent_NotAuth" name="Rejected: Unauthorized">
+      <bpmn:incoming>Flow_NotAuthorized</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="Gateway_CheckValid" name="Are mandatory fields valid?" default="Flow_Invalid">
+      <bpmn:incoming>Flow_Authorized</bpmn:incoming>
       <bpmn:outgoing>Flow_Valid</bpmn:outgoing>
       <bpmn:outgoing>Flow_Invalid</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:endEvent id="EndEvent_1" name="Listing Submitted">
+    <bpmn:exclusiveGateway id="Gateway_IsOrganic" name="Organic Claimed?" default="Flow_NotOrganic">
       <bpmn:incoming>Flow_Valid</bpmn:incoming>
+      <bpmn:outgoing>Flow_Organic</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotOrganic</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_VerifyAPI" name="Verify Certification API">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="io.camunda:http-json:1" retries="3" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="method" value="POST" />
+          <zeebe:header key="url" value="https://api.organic-verify.com/check" />
+          <zeebe:header key="contentType" value="application/json" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Organic</bpmn:incoming>
+      <bpmn:outgoing>Flow_APISuccess</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="BoundaryError_API" name="API Error" attachedToRef="Task_VerifyAPI">
+      <bpmn:outgoing>Flow_ErrorHandler</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDef_1" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="BoundaryTimer_API" name="API Timeout" attachedToRef="Task_VerifyAPI">
+      <bpmn:outgoing>Flow_TimeoutHandler</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDef_1">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT5S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_ManualReview" name="Manual Certification Review">
+      <bpmn:extensionElements>
+        <zeebe:assignmentDefinition assignee="admin" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ErrorHandler</bpmn:incoming>
+      <bpmn:incoming>Flow_TimeoutHandler</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReviewComplete</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="EndEvent_Success" name="Listing Published">
+      <bpmn:incoming>Flow_APISuccess</bpmn:incoming>
+      <bpmn:incoming>Flow_NotOrganic</bpmn:incoming>
+      <bpmn:incoming>Flow_ReviewComplete</bpmn:incoming>
     </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_EnterDetails" />
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_EnterDetails" targetRef="Gateway_CheckValid" />
-    <bpmn:sequenceFlow id="Flow_Valid" name="Yes" sourceRef="Gateway_CheckValid" targetRef="EndEvent_1">
-      <bpmn:conditionExpression xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="bpmn:tFormalExpression">= productName != null and price != null</bpmn:conditionExpression>
+    <bpmn:sequenceFlow id="Flow_Start" sourceRef="StartEvent_1" targetRef="Task_EnterDetails" />
+    <bpmn:sequenceFlow id="Flow_CheckAuth" sourceRef="Task_EnterDetails" targetRef="Gateway_CheckAuth" />
+    <bpmn:sequenceFlow id="Flow_Authorized" name="Yes" sourceRef="Gateway_CheckAuth" targetRef="Gateway_CheckValid">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= isAuthorized = true</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:sequenceFlow id="Flow_Invalid" name="No, missing info" sourceRef="Gateway_CheckValid" targetRef="Task_EnterDetails" />
+    <bpmn:sequenceFlow id="Flow_NotAuthorized" name="No" sourceRef="Gateway_CheckAuth" targetRef="EndEvent_NotAuth" />
+    <bpmn:sequenceFlow id="Flow_Valid" name="Valid" sourceRef="Gateway_CheckValid" targetRef="Gateway_IsOrganic">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= productName != null and price != null</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Invalid" name="Missing Info" sourceRef="Gateway_CheckValid" targetRef="Task_EnterDetails" />
+    <bpmn:sequenceFlow id="Flow_Organic" name="Yes" sourceRef="Gateway_IsOrganic" targetRef="Task_VerifyAPI">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">= isOrganic = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_NotOrganic" name="No" sourceRef="Gateway_IsOrganic" targetRef="EndEvent_Success" />
+    <bpmn:sequenceFlow id="Flow_APISuccess" sourceRef="Task_VerifyAPI" targetRef="EndEvent_Success" />
+    <bpmn:sequenceFlow id="Flow_ErrorHandler" sourceRef="BoundaryError_API" targetRef="Task_ManualReview" />
+    <bpmn:sequenceFlow id="Flow_TimeoutHandler" sourceRef="BoundaryTimer_API" targetRef="Task_ManualReview" />
+    <bpmn:sequenceFlow id="Flow_ReviewComplete" sourceRef="Task_ManualReview" targetRef="EndEvent_Success" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="ProductListingProcess">
-      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
-        <dc:Bounds x="156" y="161" width="36" height="36" />
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="252" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="145" y="197" width="59" height="14" />
+          <dc:Bounds x="142" y="295" width="57" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_EnterDetails_di" bpmnElement="Task_EnterDetails">
-        <dc:Bounds x="250" y="139" width="100" height="80" />
+        <dc:Bounds x="240" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_CheckAuth_di" bpmnElement="Gateway_CheckAuth" isMarkerVisible="true">
+        <dc:Bounds x="390" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="380" y="302" width="70" height="27" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_CheckValid_di" bpmnElement="Gateway_CheckValid" isMarkerVisible="true">
-        <dc:Bounds x="405" y="132" width="50" height="50" />
+        <dc:Bounds x="490" y="245" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="391" y="197" width="78" height="14" />
+          <dc:Bounds x="475" y="302" width="82" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="552" y="161" width="36" height="36" />
+      <bpmndi:BPMNShape id="Gateway_IsOrganic_di" bpmnElement="Gateway_IsOrganic" isMarkerVisible="true">
+        <dc:Bounds x="590" y="245" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="527" y="203" width="85" height="14" />
+          <dc:Bounds x="585" y="302" width="61" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="192" y="179" />
-        <di:waypoint x="250" y="179" />
+      <bpmndi:BPMNShape id="Task_VerifyAPI_di" bpmnElement="Task_VerifyAPI">
+        <dc:Bounds x="690" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ManualReview_di" bpmnElement="Task_ManualReview">
+        <dc:Bounds x="690" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Success_di" bpmnElement="EndEvent_Success">
+        <dc:Bounds x="852" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="836" y="235" width="72" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_NotAuth_di" bpmnElement="EndEvent_NotAuth">
+        <dc:Bounds x="397" y="92" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="382" y="54.5" width="66" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryTimer_API_di" bpmnElement="BoundaryTimer_API">
+        <dc:Bounds x="722" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="764" y="265" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryError_API_di" bpmnElement="BoundaryError_API">
+        <dc:Bounds x="722" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="764" y="248" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_di" bpmnElement="Flow_Start">
+        <di:waypoint x="188" y="270" />
+        <di:waypoint x="240" y="270" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="350" y="179" />
-        <di:waypoint x="405" y="179" />
+      <bpmndi:BPMNEdge id="Flow_CheckAuth_di" bpmnElement="Flow_CheckAuth">
+        <di:waypoint x="340" y="270" />
+        <di:waypoint x="390" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Authorized_di" bpmnElement="Flow_Authorized">
+        <di:waypoint x="440" y="270" />
+        <di:waypoint x="490" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="452" y="245" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotAuthorized_di" bpmnElement="Flow_NotAuthorized">
+        <di:waypoint x="415" y="245" />
+        <di:waypoint x="412" y="128" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="390" y="183" width="15" height="14" />
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Valid_di" bpmnElement="Flow_Valid">
-        <di:waypoint x="433" y="179" />
-        <di:waypoint x="552" y="179" />
+        <di:waypoint x="540" y="270" />
+        <di:waypoint x="590" y="270" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="484" y="163" width="18" height="14" />
+          <dc:Bounds x="554" y="245" width="24" height="14" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_Invalid_di" bpmnElement="Flow_Invalid">
-        <di:waypoint x="430" y="132" />
-        <di:waypoint x="430" y="100" />
-        <di:waypoint x="300" y="100" />
-        <di:waypoint x="300" y="139" />
+        <di:waypoint x="515" y="295" />
+        <di:waypoint x="515" y="350" />
+        <di:waypoint x="290" y="350" />
+        <di:waypoint x="290" y="310" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="326" y="75" width="79" height="14" />
+          <dc:Bounds x="370" y="325" width="69" height="14" />
         </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Organic_di" bpmnElement="Flow_Organic">
+        <di:waypoint x="640" y="245" />
+        <di:waypoint x="640" y="210" />
+        <di:waypoint x="690" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="650" y="190" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotOrganic_di" bpmnElement="Flow_NotOrganic">
+        <di:waypoint x="640" y="270" />
+        <di:waypoint x="852" y="270" />
+        <di:waypoint x="870" y="270" />
+        <di:waypoint x="870" y="228" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="742" y="245" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_APISuccess_di" bpmnElement="Flow_APISuccess">
+        <di:waypoint x="790" y="210" />
+        <di:waypoint x="852" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ErrorHandler_di" bpmnElement="Flow_ErrorHandler">
+        <di:waypoint x="740" y="268" />
+        <di:waypoint x="740" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TimeoutHandler_di" bpmnElement="Flow_TimeoutHandler">
+        <di:waypoint x="740" y="268" />
+        <di:waypoint x="740" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReviewComplete_di" bpmnElement="Flow_ReviewComplete">
+        <di:waypoint x="790" y="370" />
+        <di:waypoint x="870" y="370" />
+        <di:waypoint x="870" y="228" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
