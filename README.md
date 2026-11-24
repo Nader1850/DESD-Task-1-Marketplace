@@ -16,8 +16,14 @@ For Sprint 2, the group has successfully coordinated and divided the tasks:
 *   `inventory-management.bpmn` - Executable operational process for stock management.
 *   `Form_ProductDetails.form` - Camunda Form linked to the Product Listing process.
 
-## Sprint 3 Plan (Final Implementation)
-Moving into Sprint 3, our focus is on final integration and in-class demonstration. 
-*   **Nadir**: Final Camunda execution testing, fixing local UI bugs, and final demonstration preparation.
-*   **Muhammad Raza**: Assisting with final traceability checks and Contribution Matrix.
-*   **Imed**: Finalizing the LESP evaluation document and ensuring compliance in the Camunda process.
+## Sprint 3 Final Implementation Plan
+*   **Nadir**: Final Camunda execution, exception flow testing (Boundary Events), and final demonstration preparation.
+*   **Muhammad Raza**: Final LESP evaluation and traceability verification.
+*   **Imed**: Task 2 integration documentation and form variable validation.
+
+### How to Run
+1. Open the `.bpmn` files in Camunda Modeler.
+2. Deploy to a local Camunda 8 Run engine.
+3. Access the Tasklist/Processes tab to execute the forms.
+
+
